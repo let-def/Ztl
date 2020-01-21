@@ -4,4 +4,10 @@ all:
 clean:
 	dune clean
 
-.PHONY: all clean
+test:
+	dune runtest
+
+metadata:
+	dune build @install
+
+.PHONY: all clean test metadata

@@ -1,6 +1,6 @@
 (library
  (name ztl)
- (modules ztl state_tracker typed)
+ (modules ztl state_tracker)
  (wrapped true)
  (c_library_flags (-lstdc++))
  (libraries z3 grenier.strong))
