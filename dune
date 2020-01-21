@@ -1,5 +1,0 @@
-(library
- (name zl)
- (wrapped false)
- (c_library_flags (-lstdc++))
- (libraries z3))

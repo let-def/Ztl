@@ -1,2 +1,7 @@
 all:
-	dune build zl.cmxa
+	dune build lib/ztl.cmxa
+	
+clean:
+	dune clean
+
+.PHONY: all clean
