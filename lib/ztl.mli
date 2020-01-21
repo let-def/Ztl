@@ -159,6 +159,7 @@ module Term : sig
   val make : 'a sort -> 'a desc -> 'a term
 
   val apply : ('dom, 'cod) symbol -> 'dom Symbol.args -> 'cod term
+  val const : (unit, 'cod) symbol -> 'cod term
   val if_ : boolean term -> then_:'a term -> else_:'a term -> 'a term
 end
 
@@ -282,6 +283,7 @@ end
 
 module Infix : sig
   val ( ==? )  : 'a term -> 'a term -> boolean term
+  val ( <>? )  : 'a term -> 'a term -> boolean term
   (*val ( !? ) : boolean term -> boolean term*)
   val ( <=>?)  : boolean term -> boolean term -> boolean term
   val ( ==>? ) : boolean term -> boolean term -> boolean term

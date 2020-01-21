@@ -376,6 +376,9 @@ module Term = struct
     let expr_z3 = zapply sym args in
     { expr_z3; expr_sort = sym.sym_sort; expr_desc = Apply (sym, args) }
 
+  let const sym =
+    apply sym []
+
   let if_ cond ~then_ ~else_ =
     make then_.expr_sort (If_then_else (cond, then_, else_))
 end
@@ -575,6 +578,7 @@ end
 
 module Infix = struct
   let ( ==? )  = Boolean.equal
+  let ( <>? ) a b = Boolean.not (a ==? b)
   (*let ( !? )   = Boolean.not*)
   let ( <=>?)  = Boolean.iff
   let ( ==>? ) = Boolean.implies
