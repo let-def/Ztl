@@ -56,9 +56,24 @@ module Symbol : sig
 end
 
 module Term : sig
+
+  type var = Var : (unit, 'a) symbol -> var
+  type pat = Pat : 'a term -> pat
+
+  type quantifier = {
+    vars: var list;
+    patterns: pat list list;
+    body: boolean term;
+    weight: int option
+  }
+
   type 'a desc =
     | Apply : ('dom, 'cod) symbol * 'dom Symbol.args -> 'cod desc
     | If_then_else : boolean term * 'a term * 'a term -> 'a desc
+
+    | Forall : quantifier -> boolean desc
+    | Exists : quantifier -> boolean desc
+    | Lambda : (unit, 'a) symbol * 'b term -> ('a, 'b) zarray desc
 
     | Boolean_literal  : bool -> boolean desc
     | Boolean_equal    : 'a term * 'a term -> boolean desc
@@ -161,6 +176,10 @@ module Term : sig
   val apply : ('dom, 'cod) symbol -> 'dom Symbol.args -> 'cod term
   val const : (unit, 'cod) symbol -> 'cod term
   val if_ : boolean term -> then_:'a term -> else_:'a term -> 'a term
+
+  val forall : var list -> ?patterns:pat list list -> ?weight:int -> boolean term -> boolean term
+  val exists : var list -> ?patterns:pat list list -> ?weight:int -> boolean term -> boolean term
+  val lambda : (unit, 'a) symbol -> 'b term -> ('a, 'b) zarray term
 end
 
 module Boolean : sig

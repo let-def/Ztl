@@ -107,9 +107,23 @@ module Term = struct
     sym_sort: 'cod sort;
   }
 
+  and var = Var : (unit, 'a) symbol -> var
+  and pat = Pat : 'a term -> pat
+
+  and quantifier = {
+    vars: var list;
+    patterns: pat list list;
+    body: boolean term;
+    weight: int option
+  }
+
   and 'a desc =
     | Apply : ('dom, 'cod) symbol * 'dom symbol_args -> 'cod desc
     | If_then_else : boolean term * 'a term * 'a term -> 'a desc
+
+    | Forall : quantifier -> boolean desc
+    | Exists : quantifier -> boolean desc
+    | Lambda : (unit, 'a) symbol * 'b term -> ('a, 'b) zarray desc
 
     | Boolean_literal  : bool -> boolean desc
     | Boolean_equal    : 'a term * 'a term -> boolean desc
@@ -237,10 +251,33 @@ module Term = struct
     | `Signed   -> true
     | `Unsigned -> false
 
+  let zquantifier kind {vars; patterns; weight; body} =
+    let vars = List.map (fun (Var v) -> zapply v []) vars in
+    let patterns =
+      List.map
+        (fun ps ->
+           Z3.Quantifier.mk_pattern z3_context
+             (List.map (fun (Pat p) -> zexpr p) ps))
+        patterns
+    in
+    Z3.Quantifier.expr_of_quantifier (
+      Z3.Quantifier.mk_quantifier_const z3_context
+        (match kind with `Forall -> true | `Exists -> false)
+        vars (zexpr body) weight patterns
+        [] None None
+    )
+
   let zoperator (type a) : a desc -> zexpr = function
     | Apply (sym, args) -> zapply sym args
     | If_then_else (cond, then_, else_) ->
       Z3.Boolean.mk_ite z3_context (zexpr cond) (zexpr then_) (zexpr else_)
+
+    | Forall q -> zquantifier `Forall q
+    | Exists q -> zquantifier `Exists q
+    | Lambda (var, term) ->
+      Z3.Quantifier.expr_of_quantifier (
+        Z3.Quantifier.mk_lambda_const z3_context [zapply var []] (zexpr term)
+      )
 
     | Boolean_literal b        -> Z3.Boolean.mk_val z3_context b
     | Boolean_equal (e1, e2)   -> lift2 Z3.Boolean.mk_eq e1 e2
@@ -381,6 +418,15 @@ module Term = struct
 
   let if_ cond ~then_ ~else_ =
     make then_.expr_sort (If_then_else (cond, then_, else_))
+
+  let forall vars ?(patterns=([] : _ list)) ?weight body =
+    make Boolean (Forall { vars; patterns; weight; body })
+
+  let exists vars ?(patterns=([] : _ list)) ?weight body =
+    make Boolean (Exists { vars; patterns; weight; body })
+
+  let lambda var term =
+    make (Zarray (var.sym_sort, term.expr_sort)) (Lambda (var, term))
 end
 
 type 'a term = 'a Term.term
