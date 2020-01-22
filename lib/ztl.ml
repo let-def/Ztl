@@ -150,8 +150,8 @@ module Term = struct
     | Zset_full   : 'a sort -> 'a zset desc
     | Zset_add    : 'a term * 'a zset term -> 'a zset desc
     | Zset_remove : 'a term * 'a zset term -> 'a zset desc
-    | Zset_union  : 'a zset term * 'a zset term -> 'a zset desc
-    | Zset_intersect : 'a zset term * 'a zset term -> 'a zset desc
+    | Zset_union  : 'a zset term list -> 'a zset desc
+    | Zset_intersect : 'a zset term list -> 'a zset desc
     | Zset_difference : 'a zset term * 'a zset term -> 'a zset desc
     | Zset_complement : 'a zset term -> 'a zset desc
     | Zset_is_member : 'a term * 'a zset term -> boolean desc
@@ -286,9 +286,9 @@ module Term = struct
     | Zset_full       sort -> Z3.Set.mk_full z3_context (z3_sort sort)
     | Zset_add        (elt, zset) -> lift2 Z3.Set.mk_set_add elt zset
     | Zset_remove     (elt, zset) -> lift2 Z3.Set.mk_del elt zset
-    | Zset_union      (set1, set2) -> lift2 Z3.Set.mk_subset set1 set2
-    | Zset_intersect  (set1, set2) -> lift2 Z3.Set.mk_subset set1 set2
-    | Zset_difference (set1, set2) -> lift2 Z3.Set.mk_subset set1 set2
+    | Zset_union      sets -> liftl Z3.Set.mk_union sets
+    | Zset_intersect  sets -> liftl Z3.Set.mk_intersection sets
+    | Zset_difference (set1, set2) -> lift2 Z3.Set.mk_difference set1 set2
     | Zset_complement set1 -> lift1 Z3.Set.mk_complement set1
     | Zset_is_member  (elt, zset) -> lift2 Z3.Set.mk_membership elt zset
     | Zset_is_subset  (set1, set2) -> lift2 Z3.Set.mk_subset set1 set2
@@ -507,8 +507,14 @@ module Zset = struct
   let full  sort = make (Zset sort) (Zset_full sort)
   let add elt set = make set.expr_sort (Zset_add (elt, set))
   let remove elt set = make set.expr_sort (Zset_remove (elt, set))
-  let union set1 set2 = make set1.expr_sort (Zset_union (set1, set2))
-  let intersect set1 set2 = make set1.expr_sort (Zset_intersect (set1, set2))
+  let union set1 set2 = make set1.expr_sort (Zset_union [set1; set2])
+  let unions : _ list -> _ = function
+    | [] -> invalid_arg "Zset.unions: list must be non empty"
+    | (x :: _) as xs -> make x.expr_sort (Zset_union xs)
+  let intersect set1 set2 = make set1.expr_sort (Zset_intersect [set1; set2])
+  let intersections : _ list -> _ = function
+    | [] -> invalid_arg "Zset.intersections: list must be non empty"
+    | (x :: _) as xs -> make x.expr_sort (Zset_intersect xs)
   let difference set1 set2 = make set2.expr_sort (Zset_difference (set1, set2))
   let complement set = make set.expr_sort (Zset_complement set)
   let is_member elt set = make Boolean (Zset_is_member (elt, set))

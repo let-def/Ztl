@@ -99,8 +99,8 @@ module Term : sig
     | Zset_full   : 'a sort -> 'a zset desc
     | Zset_add    : 'a term * 'a zset term -> 'a zset desc
     | Zset_remove : 'a term * 'a zset term -> 'a zset desc
-    | Zset_union  : 'a zset term * 'a zset term -> 'a zset desc
-    | Zset_intersect : 'a zset term * 'a zset term -> 'a zset desc
+    | Zset_union  : 'a zset term list -> 'a zset desc
+    | Zset_intersect : 'a zset term list -> 'a zset desc
     | Zset_difference : 'a zset term * 'a zset term -> 'a zset desc
     | Zset_complement : 'a zset term -> 'a zset desc
     | Zset_is_member : 'a term * 'a zset term -> boolean desc
@@ -225,7 +225,9 @@ module Zset : sig
   val add    : 'a term -> 'a zset term -> 'a zset term
   val remove : 'a term -> 'a zset term -> 'a zset term
   val union  : 'a zset term -> 'a zset term -> 'a zset term
+  val unions  : 'a zset term list -> 'a zset term
   val intersect : 'a zset term -> 'a zset term -> 'a zset term
+  val intersections  : 'a zset term list -> 'a zset term
   val difference : 'a zset term -> 'a zset term -> 'a zset term
   val complement : 'a zset term -> 'a zset term
   val is_member : 'a term -> 'a zset term -> boolean term
