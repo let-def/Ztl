@@ -21,6 +21,42 @@ type real      = real_ numeral
 type (_, _) zarray = private Sort_zarray
 type _ zset     = private Sort_zset
 type _ bitvector = private Sort_bitvector
+type _ uninterpreted = private Sort_uninterpreted
+
+module Uninterpreted : sig
+  type 'a t
+  val order : 'a t -> 'b t -> ('a, 'b) order
+  val lift_eq : ('a, 'b) eq -> ('a t, 'b t) eq
+
+  val to_int : 'a t -> int
+  val zsort : 'a t -> Z3.Sort.sort
+
+  module type T = sig type n val n : n t end
+  module Fresh (N : sig val name : string end) () : T
+  val fresh : string -> (module T)
+end = struct
+  type 'a t = U : Z3.Sort.sort -> unit t [@@ocaml.unboxed]
+
+  let order (type a b) (U a : a t) (U b : b t) : (a, b) order =
+    if a < b then Lt else if a > b then Gt else Eq
+
+  let lift_eq (type a b) (Refl : (a, b) eq) : (a t, b t) eq = Refl
+
+  let to_int (type a) (U a : a t) = Z3.Sort.get_id a
+  let zsort (type a) (U a : a t) = a
+
+  module type T = sig type n val n : n t end
+
+  module Fresh (N : sig val name : string end) () = struct
+    type n = unit
+    let n = U (Z3.Sort.mk_uninterpreted_s z3_context N.name)
+  end
+  let fresh name =
+    (module struct
+      type n = unit
+      let n = U (Z3.Sort.mk_uninterpreted_s z3_context name)
+    end : T)
+end
 
 type signedness = [ `Signed | `Unsigned ]
 
@@ -31,6 +67,7 @@ type 'a sort =
   | Zarray : 'a sort * 'b sort -> ('a, 'b) zarray sort
   | Zset : 'a sort -> 'a zset sort
   | Bitvector : 'a natural -> 'a bitvector sort
+  | Uninterpreted : 'a Uninterpreted.t -> 'a uninterpreted sort
 
 module Sort = struct
   let rec name : type a. a sort -> string = function
@@ -40,6 +77,8 @@ module Sort = struct
     | Zarray (dom, cod) -> Printf.sprintf "array(%s,%s)" (name dom) (name cod)
     | Zset dom -> Printf.sprintf "zset(%s)" (name dom)
     | Bitvector dom -> Printf.sprintf "bitvector(%d)" (Natural.to_int dom)
+    | Uninterpreted id ->
+      Printf.sprintf "uninterpreted#%d" (Uninterpreted.to_int id)
 
   let compare_order a b =
     let c = compare (Obj.repr a) (Obj.repr b) in
@@ -74,7 +113,13 @@ module Sort = struct
         | Eq -> Eq
         | (Lt | Gt) as n -> n
       end
-    | (Boolean | Integer | Real | Zarray _ | Zset _ | Bitvector _), _ ->
+    | Uninterpreted a, Uninterpreted b ->
+      begin match Uninterpreted.order a b with
+        | Eq -> Eq
+        | (Lt | Gt) as n -> n
+      end
+    | ( Boolean | Integer | Real | Zarray _
+      | Zset _ | Bitvector _ | Uninterpreted _ ), _ ->
       compare_order a b
 end
 
@@ -90,6 +135,7 @@ let rec z3_sort : type a. a sort -> Z3.Sort.sort = function
     Z3.Z3Array.mk_sort z3_context (z3_sort dom) (z3_sort cod)
   | Zset dom -> Z3.Set.mk_sort z3_context (z3_sort dom)
   | Bitvector dom -> Z3.BitVector.mk_sort z3_context (Natural.to_int dom)
+  | Uninterpreted u -> Uninterpreted.zsort u
 
 module Term = struct
   [@@@ocaml.warning "-30"]

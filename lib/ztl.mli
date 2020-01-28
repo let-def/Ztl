@@ -12,6 +12,19 @@ type real      = real_ numeral
 type (_, _) zarray = private Sort_zarray
 type _ zset     = private Sort_zset
 type _ bitvector = private Sort_bitvector
+type _ uninterpreted = private Sort_uninterpreted
+
+module Uninterpreted : sig
+  type 'a t
+  val order : 'a t -> 'b t -> ('a, 'b) order
+  val lift_eq : ('a, 'b) eq -> ('a t, 'b t) eq
+
+  val to_int : 'a t -> int
+
+  module type T = sig type n val n : n t end
+  module Fresh (N : sig val name : string end) () : T
+  val fresh : string -> (module T)
+end
 
 type 'a sort =
   | Boolean : boolean sort
@@ -20,6 +33,7 @@ type 'a sort =
   | Zarray : 'a sort * 'b sort -> ('a, 'b) zarray sort
   | Zset : 'a sort -> 'a zset sort
   | Bitvector : 'a natural -> 'a bitvector sort
+  | Uninterpreted : 'a Uninterpreted.t -> 'a uninterpreted sort
 
 type 'a term
 type ('dom, 'cod) symbol
